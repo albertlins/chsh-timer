@@ -1,183 +1,416 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CHSH 炎上監測系統 v2.0</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CHSH 華陽崗炎上監控終端</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Noto+Sans+TC:wght@400;900&family=Share+Tech+Mono&display=swap" rel="stylesheet" />
     <style>
         :root {
-            --fire-color: #ff3e00;
-            --fire-glow: rgba(255, 62, 0, 0.5);
-            --bg-color: #0a0a0c;
-            --card-bg: rgba(255, 255, 255, 0.05);
-            --accent-blue: #00aaff;
+            --bg: #040608;
+            --surface: #0a0d12;
+            --border: #1a2a3a;
+            --chsh-blue: #00d2ff;
+            --chsh-blue-glow: rgba(0, 210, 255, 0.3);
+            --text: #e1e8f0;
+            --muted: #4a6a8a;
+            --green: #2db37a;
+            --red: #ff3c00;
+            --amber: #f0a500;
         }
 
-        body {
-            background-color: var(--bg-color);
-            color: #fff;
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            height: 100%;
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Noto Sans TC', sans-serif;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: 
+                linear-gradient(rgba(0, 210, 255, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 210, 255, 0.05) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+        
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.1) 2px, rgba(0,0,0,0.1) 4px);
+            pointer-events: none;
+            z-index: 100;
+        }
+
+        .page {
+            min-height: 100vh;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 40px 20px;
-            min-height: 100vh;
+            justify-content: center;
+            padding: 2rem 1rem;
+            position: relative;
+            z-index: 10;
         }
 
-        /* card */
-        .dashboard {
-            width: 100%;
-            max-width: 600px;
-            background: var(--card-bg);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 30px;
-            padding: 40px;
-            text-align: center;
-            box-shadow: 0 25px 50px rgba(0,0,0,0.5);
-            margin-bottom: 30px;
+        .status-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--chsh-blue);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 1.5rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--chsh-blue);
+            z-index: 150;
         }
 
-        .status-badge {
-            background: rgba(255, 62, 0, 0.2);
-            color: var(--fire-color);
-            padding: 5px 15px;
-            border-radius: 50px;
-            font-size: 0.8rem;
-            font-weight: bold;
-            border: 1px solid var(--fire-color);
-            display: inline-block;
-            margin-bottom: 20px;
-            animation: pulse 2s infinite;
-        }
-
-        #timer {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 3rem;
-            font-weight: 900;
-            margin: 20px 0;
-            color: #fff;
-            text-shadow: 0 0 20px var(--fire-glow);
-        }
-
-        /* 歷史 */
-        .history-container {
-            width: 100%;
-            max-width: 600px;
+        .header {
             text-align: left;
+            width: 100%;
+            max-width: 760px;
+            margin-bottom: 1.5rem;
+            margin-top: 40px;
         }
 
-        h2 {
-            font-size: 1.2rem;
-            color: #aaa;
-            border-left: 4px solid var(--fire-color);
-            padding-left: 15px;
-            margin-bottom: 20px;
+        .school-tag {
+            color: var(--chsh-blue);
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            letter-spacing: 0.3em;
         }
 
-        .timeline {
+        .main-title {
+            font-family: 'Bebas Neue', 'Noto Sans TC', sans-serif;
+            font-size: clamp(2.5rem, 6vw, 4.5rem);
+            letter-spacing: -1px;
+            color: var(--text);
+            line-height: 0.9;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            width: 100%;
+            max-width: 760px;
+            padding: 2.5rem 2rem;
             position: relative;
-            padding-left: 30px;
-            border-left: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 0 40px rgba(0,0,0,0.5);
+        }
+        
+        .panel::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 60px;
+            height: 60px;
+            border-right: 4px solid var(--chsh-blue);
+            border-top: 4px solid var(--chsh-blue);
         }
 
-        .event-card {
-            background: rgba(255, 255, 255, 0.03);
-            border-radius: 15px;
-            padding: 15px;
-            margin-bottom: 15px;
-            position: relative;
+        .timer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.5rem;
+        }
+
+        .digit-group {
+            flex: 1;
+            text-align: center;
+        }
+
+        .digit {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: clamp(2.5rem, 10vw, 6rem);
+            color: var(--text);
+            text-shadow: 0 0 15px var(--chsh-blue-glow);
+            line-height: 1;
+        }
+
+        .unit-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--chsh-blue);
+            letter-spacing: 0.2em;
+            margin-top: 5px;
+        }
+
+        .sep {
+            font-size: 2rem;
+            color: var(--border);
+            padding-bottom: 1.5rem;
+        }
+
+        .monitor-info {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-top: 1.5rem;
+            padding-top: 1.2rem;
+            border-top: 1px solid var(--border);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .info-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.55rem;
+            color: var(--muted);
+            letter-spacing: 0.1em;
+        }
+
+        .info-value {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text);
+        }
+
+        .info-value.blue {
+            color: var(--chsh-blue);
+        }
+
+        .info-value.status-safe {
+            color: var(--green);
+        }
+
+        .info-value.status-warning {
+            color: var(--amber);
+        }
+
+        .label-area {
+            width: 100%;
+            max-width: 760px;
+            text-align: right;
+            margin-top: 1rem;
+        }
+
+        .suffix-text {
+            font-family: 'Bebas Neue', 'Noto Sans TC', sans-serif;
+            font-size: 2.5rem;
+            color: var(--text);
+            opacity: 0.8;
+        }
+
+        .suffix-text span {
+            color: var(--red);
+            background: rgba(255, 60, 0, 0.1);
+            padding: 0 10px;
+        }
+
+        .log-section {
+            width: 100%;
+            max-width: 760px;
+            margin-top: 2rem;
+        }
+
+        .log-header {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--muted);
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 5px;
+        }
+
+        .log-entry {
+            display: flex;
+            padding: 1rem;
+            background: rgba(255,255,255,0.02);
+            margin-bottom: 0.5rem;
+            border: 1px solid transparent;
             transition: 0.3s;
         }
 
-        .event-card:hover {
-            background: rgba(255, 255, 255, 0.08);
+        .log-entry:hover {
+            border-color: var(--chsh-blue);
+            background: rgba(0,210,255,0.05);
         }
 
-        .event-card::before {
-            content: "";
-            position: absolute;
-            left: -36px;
-            top: 20px;
-            width: 10px;
-            height: 10px;
-            background: var(--fire-color);
-            border-radius: 50%;
-            box-shadow: 0 0 10px var(--fire-glow);
-        }
-
-        .event-date {
-            font-size: 0.8rem;
-            color: var(--fire-color);
+        .log-date {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--chsh-blue);
+            width: 110px;
             font-weight: bold;
         }
 
-        .event-desc {
-            font-size: 0.95rem;
-            margin-top: 5px;
-            color: #ddd;
+        .log-desc {
+            font-size: 0.85rem;
+            color: #a0b0c0;
         }
 
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(255, 62, 0, 0.4); }
-            70% { box-shadow: 0 0 0 10px rgba(255, 62, 0, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(255, 62, 0, 0); }
+        .footer {
+            margin-top: 4rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.6rem;
+            color: var(--muted);
+            text-align: center;
+            letter-spacing: 1px;
+        }
+
+        @media (max-width: 600px) {
+            .monitor-info {
+                grid-template-columns: 1fr;
+                gap: 0.8rem;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="status-bar">
+        <span>SYSTEM_ID: CHSH_Dystopia_01</span>
+        <span>STATUS: DEPRIVATION_ACTIVE</span>
+        <span id="live-clock">00:00:00</span>
+    </div>
 
-<div class="dashboard">
-    <div class="status-badge">MONITORING: 華陽崗火情監測中</div>
-    <div style="color: #888; font-size: 0.9rem; letter-spacing: 2px;">距離上次炎上已過去</div>
-    <div id="timer">00d 00h 00m 00s</div>
-</div>
-
-<div class="history-container">
-    <h2>歷史爭議存檔</h2>
-    <div class="timeline" id="history-list">
+    <div class="page">
+        <div class="header">
+            <div class="school-tag">// ARCHIVE_FILE: CHSH_DARK_HISTORY</div>
+            <div class="main-title">彰中已經有</div>
         </div>
-</div>
 
-<script>
-    
-    const historyEvents = [
-        { date: "2026-03-25", desc: "【國文老師在哭】校安中心強勢公告：抽檢手機箱『決』不寬貸" },
-        { date: "2025-10-22", desc: "怪盜建成怕手機被風吹走事件" },
-        { date: "2025-12-29", desc: "彰中男學生【誤】闖彰女游泳池旁窗戶" },
-        { date: "2025-09-04", desc: "貪汙冷氣一分鐘一元" }
-    ];
+        <div class="panel">
+            <div class="timer-row">
+                <div class="digit-group">
+                    <div class="digit" id="days">000</div>
+                    <div class="unit-label">DAYS</div>
+                </div>
+                <div class="sep">/</div>
+                <div class="digit-group">
+                    <div class="digit" id="hours">00</div>
+                    <div class="unit-label">HOURS</div>
+                </div>
+                <div class="sep">/</div>
+                <div class="digit-group">
+                    <div class="digit" id="minutes">00</div>
+                    <div class="unit-label">MINS</div>
+                </div>
+                <div class="sep">/</div>
+                <div class="digit-group">
+                    <div class="digit" id="seconds">00</div>
+                    <div class="unit-label">SECS</div>
+                </div>
+            </div>
 
-   
-    const lastIncidentDate = new Date(historyEvents[0].date + "T09:00:00").getTime();
+            <div class="monitor-info">
+                <div class="info-item">
+                    <div class="info-label">LAST_DIGITAL_SLAUGHTER</div>
+                    <div class="info-value blue" id="display-last-date">----.--.--</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">CURRENT_INCIDENT</div>
+                    <div class="info-value" id="display-last-type">N/A</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">SURVIVAL_STATUS</div>
+                    <div class="info-value status-safe" id="display-status">✓ 暫時平安</div>
+                </div>
+            </div>
+        </div>
 
-    function updateTimer() {
-        const now = new Date().getTime();
-        const distance = now - lastIncidentDate;
-        const d = Math.floor(distance / (1000 * 60 * 60 * 24));
-        const h = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-        const m = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
-        const s = Math.floor((distance % (1000 * 60)) / 1000);
-        const format = (num) => num.toString().padStart(2, '0');
-        document.getElementById("timer").innerHTML = `${format(d)}d ${format(h)}h ${format(m)}m ${format(s)}s`;
-    }
+        <div class="label-area">
+            <div class="suffix-text">沒有被 <span>炎上</span> 了</div>
+        </div>
 
-    
-    const listElement = document.getElementById("history-list");
-    historyEvents.forEach(event => {
-        const card = document.createElement("div");
-        card.className = "event-card";
-        card.innerHTML = `
-            <div class="event-date">${event.date}</div>
-            <div class="event-desc">${event.desc}</div>
-        `;
-        listElement.appendChild(card);
-    });
+        <div class="log-section">
+            <div class="log-header">>> RECENT_SIGNALS / 歷史存檔</div>
+            <div id="log-entries"></div>
+        </div>
 
-    setInterval(updateTimer, 1000);
-    updateTimer();
-</script>
+        <div class="footer">
+            SARCASM_LEVEL: MAX // PROTOCOL: HUMILIATION<br>
+            © 2026 CHSH INCIDENT TRACKER. NO RIGHTS RESERVED.
+        </div>
+    </div>
 
+    <script>
+        const incidents = [
+            { date: "2026.03.25", desc: "【國文老師在哭】校安中心強勢公告：抽檢手機箱『決』不寬貸", type: "國文退步中" },
+            { date: "2025.12.29", desc: "彰中男學生【誤】闖彰女游泳池旁" },
+            { date: "2025.10.22", desc: "怪盜建成怕手機被風吹走事件" },
+            { date: "2025.09.04", desc: "貪汙冷氣一分鐘一元"}
+        ];
+
+        const START_TIME = new Date(incidents[0].date.replace(/\./g, '-') + "T09:00:00").getTime();
+
+        function update() {
+            const now = new Date();
+            const clock = document.getElementById('live-clock');
+            if (clock) {
+                clock.innerText = now.toTimeString().split(' ')[0];
+            }
+            
+            const diff = Math.max(0, Math.floor((now.getTime() - START_TIME) / 1000));
+            const days = Math.floor(diff / 86400);
+
+            const dEl = document.getElementById('days');
+            const hEl = document.getElementById('hours');
+            const mEl = document.getElementById('minutes');
+            const sEl = document.getElementById('seconds');
+
+            if (dEl) dEl.innerText = String(days).padStart(3, '0');
+            if (hEl) hEl.innerText = String(Math.floor((diff % 86400) / 3600)).padStart(2, '0');
+            if (mEl) mEl.innerText = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+            if (sEl) sEl.innerText = String(diff % 60).padStart(2, '0');
+
+            const statusEl = document.getElementById('display-status');
+            if (statusEl) {
+                if (days < 7) {
+                    statusEl.innerText = `⚠️ 餘波未平`;
+                    statusEl.className = "info-value status-warning";
+                } else {
+                    statusEl.innerText = "✓ 暫時平安";
+                    statusEl.className = "info-value status-safe";
+                }
+            }
+        }
+
+        function renderLog() {
+            const dateEl = document.getElementById('display-last-date');
+            const typeEl = document.getElementById('display-last-type');
+            const logEl = document.getElementById('log-entries');
+
+            if (dateEl) dateEl.innerText = incidents[0].date;
+            if (typeEl) typeEl.innerText = incidents[0].type;
+
+            if (logEl) {
+                logEl.innerHTML = incidents.map(inc => `
+                    <div class="log-entry">
+                        <div class="log-date">[ ${inc.date} ]</div>
+                        <div class="log-desc">${inc.desc}</div>
+                    </div>
+                `).join('');
+            }
+        }
+
+        setInterval(update, 1000);
+        update();
+        renderLog();
+    </script>
 </body>
 </html>
